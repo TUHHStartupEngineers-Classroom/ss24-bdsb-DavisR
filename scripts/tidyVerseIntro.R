@@ -179,18 +179,17 @@ sales_by_year_cat_1_tbl %>%
 
 # 7.0 Writing Files ----
 
-install.packages("writexl")
 library("writexl")
 bike_orderlines_wrangled_tbl %>%
-  write_xlsx("00_data/01_bike_sales/02_wrangled_data/bike_orderlines.xlsx")
+  write_xlsx("scripts/01_bike_sales/02_wrangled_data/bike_orderlines.xlsx")
 
 # 7.2 CSV ----
 bike_orderlines_wrangled_tbl %>% 
-  write_csv("00_data/01_bike_sales/02_wrangled_data/bike_orderlines.csv")
+  write_csv("scripts/01_bike_sales/02_wrangled_data/bike_orderlines.csv")
 
 # 7.3 RDS ----
 bike_orderlines_wrangled_tbl %>% 
-  write_rds("00_data/01_bike_sales/02_wrangled_data/bike_orderlines.rds")
+  write_rds("scripts/01_bike_sales/02_wrangled_data/bike_orderlines.rds")
 
 
 
@@ -206,7 +205,7 @@ bike_orderlines_wrangled_tbl %>%
 bike_orderlines_wrangled_tbl_states <- separate(bike_orderlines_wrangled_tbl,
                                                 col = location,
                                                 into = c("city", "state"),
-                                                sep = ",",
+                                                sep = ", ",
                                                 convert = T)
 bike_orderlines_wrangled_tbl_states
 
@@ -222,17 +221,14 @@ sales_by_year_and_state_tbl <- bike_orderlines_wrangled_tbl_states %>%
   group_by(state) %>% 
   summarize(sales = sum(total_price)) %>%
   
-  # Optional: Add a column that turns the numbers into a currency format 
+  # Add a column that turns the numbers into a currency format 
   # (makes it in the plot optically more appealing)
   # mutate(sales_text = scales::dollar(sales)) <- Works for dollar values
   mutate(sales_text = scales::dollar(sales, big.mark = ".", 
                                      decimal.mark = ",", 
                                      prefix = "", 
                                      suffix = " €"))
-
-
 sales_by_year_and_state_tbl
-
 
 sales_by_year_and_state_tbl %>%
   
@@ -252,8 +248,65 @@ sales_by_year_and_state_tbl %>%
                                                     prefix = "", 
                                                     suffix = " €")) +
   labs(
-    title    = "Revenue by year",
-    subtitle = "Upward Trend",
-    x = "", # Override defaults for x and y
+    title    = "Revenue by state",
+    x = "States",
     y = "Revenue"
   ) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+
+# 2. Get state's sales per year
+sales_by_state_in_year  <- separate(bike_orderlines_wrangled_tbl,
+                                    col = location,
+                                    into = c("city", "state"),
+                                    sep = ", ",
+                                    convert = T)
+
+sales_by_state_in_year
+
+sales_by_state_in_year <- sales_by_state_in_year %>%
+  
+  # Select columns
+  select(order_date, total_price, state) %>%
+  
+  # Add year column
+  mutate(year = year(order_date)) %>%
+  
+  # Grouping by year and summarizing sales
+  group_by(state, year) %>% 
+  summarize(sales = sum(total_price)) %>%
+  
+  # Add a column that turns the numbers into a currency format 
+  # (makes it in the plot optically more appealing)
+  # mutate(sales_text = scales::dollar(sales)) <- Works for dollar values
+  mutate(sales_text = scales::dollar(sales, big.mark = ".", 
+                                     decimal.mark = ",", 
+                                     prefix = "", 
+                                     suffix = " €"))
+sales_by_state_in_year
+
+
+# Plot
+salesYearStatePlot <- sales_by_state_in_year  %>%
+  # Set up x, y, fill
+  ggplot(aes(x = year, y = sales, fill = state)) +
+  
+  # Geometries
+  geom_col() + # Run up to here to get a stacked bar plot
+  
+  # Facet
+  facet_wrap(~ state) +
+  
+  # Formatting
+  scale_y_continuous(labels = scales::dollar_format(big.mark = ".", 
+                                                    decimal.mark = ",", 
+                                                    prefix = "", 
+                                                    suffix = " €")) +
+  labs(
+    title = "Revenue by year and state",
+    subtitle = "Each state is ordered by years 2015 to 2019",
+    fill = "States:"
+  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+salesYearStatePlot
