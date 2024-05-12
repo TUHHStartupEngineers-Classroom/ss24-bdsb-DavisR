@@ -303,6 +303,9 @@ p <- p + theme(strip.text = element_text(size = 8, face = "bold"),
 print(p)
 
 
+
+
+
 # Challenge 2
 
 # Define the URL of the website

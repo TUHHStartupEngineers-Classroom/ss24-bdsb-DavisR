@@ -1,5 +1,7 @@
 library(data.table)
-library(magrittr) # to use the pipe
+library(dplyr)
+library(vroom)
+library(magrittr) 
 
 
 bikes_tbl <- read_excel("scripts/01_bike_sales/01_raw_data/bikes.xlsx") %>%
@@ -539,11 +541,12 @@ toc()
 
 
 
+
+
+
+
+
 # Challenge
-library(vroom)
-library(dplyr)
-
-
 col_types <- list(
   id = col_character(),
   type = col_character(),
@@ -586,7 +589,6 @@ uspc_tbl <- vroom(
 
 # Question 1
 # For 1	assignee, patent_assignee
-
 # Merge tables and count patents per organization
 merged_tbl <- merge(assignee_tbl, patent_assignee_tbl, by.x = "id", by.y = "assignee_id", all.x = TRUE)
 
@@ -601,9 +603,10 @@ patent_counts <- merged_tbl %>%
 print(patent_counts)
 
 
+
+
 # Question 2
 # For 2	assignee, patent_assignee, patent
-
 # Filter patents granted in August 2014
 august_patents <- patent_tbl %>%
   filter(format(date, "%Y-%m") == "2014-08")
@@ -612,7 +615,7 @@ august_patents <- patent_tbl %>%
 patents_assignees <- august_patents %>%
   inner_join(patent_assignee_tbl, by = c("id" = "patent_id"))
 
-# Join with assignee_tbl to get detailed assignee information
+# Join with assignee_tbl to get assignee information
 patents_assignees_details <- patents_assignees %>%
   inner_join(assignee_tbl, by = c("assignee_id" = "id"))
 
@@ -631,23 +634,31 @@ top_10_us_companies <- head(patents_count, 10)
 
 print(top_10_us_companies)
 
-# Question 3
-# For 3	assignee, patent_assignee, uspc
 
-# Find the top 10 companies with the most patents
+
+
+# Question 3
+# For 3	assignee_tbl, patent_assignee_tbl, uspc_tbl
+# Find top 10 companies with most patents
 top_10_companies <- patent_assignee_tbl %>%
   group_by(assignee_id) %>%
   summarise(num_patents = n()) %>%
   arrange(desc(num_patents)) %>%
   top_n(10)
 
-# Now let's find the main classes of their patents
-top_10_main_classes <- top_10_companies %>%
+# Join with assignee_tbl to get org information
+top_10_companies_with_org <- top_10_companies %>%
+  inner_join(select(assignee_tbl, -type), by = c("assignee_id" = "id"))
+
+
+# Main classes of patents
+top_10_main_classes <- top_10_companies_with_org %>%
   inner_join(patent_assignee_tbl, by = "assignee_id") %>%
-  inner_join(uspc_tbl, by = "patent_id") %>%
+  inner_join(uspc_tbl %>% mutate(patent_id = as.character(patent_id)), by = "patent_id") %>%
   group_by(mainclass_id) %>%
   summarise(num_patents = n()) %>%
   arrange(desc(num_patents)) %>%
   top_n(5)
 
-top_10_main_classes
+print(top_10_main_classes)
+
