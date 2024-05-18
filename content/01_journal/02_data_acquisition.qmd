@@ -3,132 +3,138 @@ title: "Data Acquisition"
 author: "Davis Rakhshan"
 ---
 
-
-
-# Text Formatting
-
-*italics* and **bold**
-
-superscript^2^ / subscript~2~
-
-~~strikethrough~~
-
-`verbatim code`
-
-> Blockquote
-
-# Headings
-
-## Header 2
-### Header 3
-#### Header 4
-##### Header 5
-###### Header 6
-
-# Links & Images
-
-<https://quarto.org>
-
-[Quarto](https://quarto.org)
-
-![Caption](../../assets/img/elephant.png)
-
-[![Caption](../../assets/img/elephant.png)](https://quarto.org)
-
-[![Caption](../../assets/img/elephant.png)](https://quarto.org "An elephant")
-
-
-![Caption](../../01_tidyverse_challenge_1_plot.png)
-
-![Caption](../../01_tidyverse_challenge_2_plot.png)
-
-![Caption](../../02_dataAcquisition_challenge_1_plot.png)
-
-![Caption](../../02_dataAcquisition_challenge_2_solution.png)
-
-![Caption](../../03_dataWrangling_challenge_1_question_1.png)
-
-![Caption](../../03_dataWrangling_challenge_1_question_2.png)
-
-![Caption](../../03_dataWrangling_challenge_1_question_3.png)
-
-![Caption](../../04_dataVisualization_challenge_1_plot.png)
-
-![Caption](../../04_dataVisualization_challenge_2_plot.png)
-
-
-# Lists
-
-* unordered list
-    + sub-item 1
-    + sub-item 2
-        - sub-sub-item 1
-        
-*   item 2
-
-    Continued (indent 4 spaces)
-    
-    
-1. ordered list
-2. item 2
-    i) sub-item 1
-         A.  sub-sub-item 1
-         
-(@)  A list whose numbering
-
-continues after
-
-(@)  an interruption
-
-# Tables
-
-| Right | Left | Default | Center |
-|------:|:-----|---------|:------:|
-|   12  |  12  |    12   |    12  |
-|  123  |  123 |   123   |   123  |
-|    1  |    1 |     1   |     1  |
-
-# Source Code
-
-Use ``` to delimit blocks of source code:
-
-```
-code
-```
-
-Add a language to syntax highlight code blocks:
-
-```{r}
-1 + 1
-```
-
-```{r}
-cars
-```
-
-```{r}
-plot(cars)
-```
-
-
 # Challenge 1
 
 Question 1:
+
 Get some data via an API. There are millions of providers, that offer API access for free and have good documentation about how to query their service. You just have to google them. You can use whatever service you want. For example, you can get data about your listening history (spotify), get data about flights (skyscanner) or just check the weather forecast. Print the data in a readable format, e.g. a table if you want, you could also plot it.
 
 Code:
 
 ```{r}
+library(RSQLite)
+library(httr)
+library(glue)
+library(jsonlite)
+library("tidyverse")
+library(rvest)
 
+# Challenge 1
+
+# Latitude and longitude of TUHH
+latitude <- "53.46"
+longitude <- "9.97"
+  
+resp <- GET(glue("https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&hourly=temperature_2m&timezone=Europe%2FBerlin"))
+
+respTable <- resp %>% 
+            .$content %>% 
+            rawToChar() %>% 
+            fromJSON()
+respTable
+
+
+# Extract relevant data from the response
+forecast_data <- respTable$hourly
+
+# Create a tibble
+weather_tbl <- tibble(
+  time = forecast_data$time,
+  temperature_2m = forecast_data$temperature_2m
+)
+
+# Print the tibble
+print(weather_tbl)
+
+
+
+# Convert time to datetime format
+weather_tbl$time <- as.POSIXct(weather_tbl$time, format = "%Y-%m-%dT%H:%M")
+
+# Ensure data is sorted by time
+weather_tbl <- weather_tbl %>% arrange(time)
+
+
+# Extract day part of the date
+weather_tbl$day <- factor(format(weather_tbl$time, "%d"), levels = unique(format(weather_tbl$time, "%d")))
+weather_tbl <- na.omit(weather_tbl)
+
+
+# Create a plot
+p <- ggplot(weather_tbl, aes(x = time, y = temperature_2m)) +
+  geom_point(position = "identity") +  # Set position to "identity" to remove space between points
+  geom_line(color = "blue", show.legend = FALSE) +
+  labs(title = "Hourly Temperature for 7 Days",
+       subtitle = "Ordered by date and time",
+       x = "Time",
+       y = "Temperature (°C)") +
+  theme_minimal() +
+  facet_wrap(~ factor(format(weather_tbl$time, "%A"), levels = unique(format(weather_tbl$time, "%A"))), nrow = 1, scales = "free_x")
+
+# Adjust x-axis labels to show only time with ":00"
+p <- p + scale_x_datetime(date_breaks = "6 hours", date_labels = "%H:%M:00") # Adjust date_labels
+
+# Remove space between plots
+p <- p + theme(strip.text = element_text(size = 8, face = "bold"), 
+               panel.spacing = unit(0, "lines"),
+               axis.text.x = element_text(angle = 45, hjust = 1, size = 8), # Adjust angle and size
+               legend.title = element_blank())
+
+# Print the plot
+print(p)
 ```
 
 # Challenge 2
 
 Question 2:
+
 Scrape one of the competitor websites of canyon (either https://www.rosebikes.de/ or https://www.radon-bikes.de) and create a small database. The database should contain the model names and prices for at least one category. Use the selectorgadget to get a good understanding of the website structure, it is really helpful. After scraping your data, convert it to a readable format. Prices should be in a numeric format without any other letters or symbols. Also check if the prices are reasonable.
 
 Code:
 
 ```{r}
 
+# Challenge 2
+
+# Define the URL of the website
+url_race <- "https://www.rosebikes.de/fahrr%C3%A4der/rennrad/race"
+url_endurance <- "https://www.rosebikes.de/fahrr%C3%A4der/rennrad/endurance"
+url_eBike <- "https://www.rosebikes.de/fahrr%C3%A4der/rennrad/e-rennrad"
+
+# Read the HTML content of the webpage
+webpage_race <- url_race %>% read_html()
+webpage_endurance <- url_endurance %>% read_html()
+webpage_eBike <- url_eBike %>% read_html()
+
+# Extract the content within the h4 tag with class "basic-headline__title"
+title_race        <- html_text(html_nodes(webpage_race, "h4.basic-headline__title"))
+title_endurance   <- html_text(html_nodes(webpage_endurance, "h4.basic-headline__title"))
+title_eBike       <- html_text(html_nodes(webpage_eBike, "h4.basic-headline__title"))
+
+# Extract the content within the specified class "catalog-category-bikes__price-title"
+price_title_race      <- html_text(html_nodes(webpage_race, ".catalog-category-bikes__price-title"))
+price_title_endurance <- html_text(html_nodes(webpage_endurance, ".catalog-category-bikes__price-title"))
+price_title_eBike<- html_text(html_nodes(webpage_eBike, ".catalog-category-bikes__price-title"))
+
+# Remove "ab " and "\n" from the price
+price_title_race <- gsub("ab |\\n", "", price_title_race)
+price_title_endurance <- gsub("ab |\\n", "", price_title_endurance)
+price_title_eBike<- gsub("ab |\\n", "", price_title_eBike)
+
+# Remove trailing whitespaces
+price_title_race <- trimws(price_title_race)
+price_title_endurance <- trimws(price_title_endurance)
+price_title_eBike<- trimws(price_title_eBike)
+
+
+# Create a tibble with the extracted content
+bike_data_race <- tibble(model = title_race, price = price_title_race)
+bike_data_endurance <- tibble(model = title_endurance, price = price_title_endurance)
+bike_data_eBike<- tibble(model = title_eBike, price = price_title_eBike)
+
+
+# Print the tibble
+print(bike_data_race)
+print(bike_data_endurance)
+print(bike_data_eBike)
 ```
