@@ -32,7 +32,7 @@
     "href": "content/01_journal/01_tidyverse.html",
     "title": "Tidyverse",
     "section": "",
-    "text": "Note\n\n\n\nYou can delete everything in here and start fresh.\nThis is a .qmd file. It is plain text with special features. Any time you write just like this, it will be compiled to normal text in the website. If you put a # in front of your text, it will create a top level-header.\nTo learn more about Quarto websites visit https://quarto.org/docs/websites."
+    "text": "1 Challenge 1\nQuestion 1: Analyze the sales by location (state) with a bar plot. Since state and city are multiple features (variables), they should be split. Which state has the highes revenue?\nCode:\n\n# Challenge 1\nlibrary(tidyverse)\n\n#&gt; ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n#&gt; ✔ dplyr     1.1.4     ✔ readr     2.1.5\n#&gt; ✔ forcats   1.0.0     ✔ stringr   1.5.1\n#&gt; ✔ ggplot2   3.5.0     ✔ tibble    3.2.1\n#&gt; ✔ lubridate 1.9.3     ✔ tidyr     1.3.1\n#&gt; ✔ purrr     1.0.2     \n#&gt; ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──\n#&gt; ✖ dplyr::filter() masks stats::filter()\n#&gt; ✖ dplyr::lag()    masks stats::lag()\n#&gt; ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors\n\nlibrary(\"readxl\")\n\n# Importing Files\nbikes_tbl      &lt;- read_excel(path = \"../../scripts/01_bike_sales/01_raw_data/bikes.xlsx\")\nbikeshops_tbl  &lt;- read_excel(path = \"../../scripts/01_bike_sales/01_raw_data/bikeshops.xlsx\")\norderlines_tbl &lt;- read_excel(path = \"../../scripts/01_bike_sales/01_raw_data/orderlines.xlsx\")\n\n#&gt; New names:\n#&gt; • `` -&gt; `...1`\n\n# Joining Data\nleft_join(orderlines_tbl, bikes_tbl, by = c(\"product.id\" = \"bike.id\"))\n\n\n\n  \n\n\n# Chaining commands with the pipe and assigning it to order_items_joined_tbl\nbike_orderlines_joined_tbl &lt;- orderlines_tbl %&gt;%\n  left_join(bikes_tbl, by = c(\"product.id\" = \"bike.id\")) %&gt;%\n  left_join(bikeshops_tbl, by = c(\"customer.id\" = \"bikeshop.id\"))\n\n# Wrangling Data\nbike_orderlines_joined_tbl %&gt;% \n  select(category) %&gt;%\n  filter(str_detect(category, \"^Mountain\")) %&gt;% \n  unique()\n\n\n\n  \n\n\nbike_orderlines_wrangled_tbl &lt;- bike_orderlines_joined_tbl %&gt;%\n  separate(col    = category,\n           into   = c(\"category.1\", \"category.2\", \"category.3\"),\n           sep    = \" - \") %&gt;%\n  mutate(total.price = price * quantity) %&gt;%\n  select(-...1, -gender) %&gt;%\n  select(-ends_with(\".id\")) %&gt;%\n  bind_cols(bike_orderlines_joined_tbl %&gt;% select(order.id)) %&gt;% \n  select(order.id, contains(\"order\"), contains(\"model\"), contains(\"category\"),\n         price, quantity, total.price,\n         everything()) %&gt;%\n  rename(bikeshop = name) %&gt;%\n  set_names(names(.) %&gt;% str_replace_all(\"\\\\.\", \"_\"))\n\n# Separate cities and states\nbike_orderlines_wrangled_tbl_states &lt;- separate(bike_orderlines_wrangled_tbl,\n                                                col = location,\n                                                into = c(\"city\", \"state\"),\n                                                sep = \", \",\n                                                convert = T)\nbike_orderlines_wrangled_tbl_states\n\n\n\n  \n\n\nsales_by_year_and_state_tbl &lt;- bike_orderlines_wrangled_tbl_states %&gt;%\n  select(order_date, total_price, state) %&gt;%\n  mutate(year = year(order_date)) %&gt;%\n  group_by(state) %&gt;% \n  summarize(sales = sum(total_price)) %&gt;%\n  mutate(sales_text = scales::dollar(sales, big.mark = \".\", \n                                     decimal.mark = \",\", \n                                     prefix = \"\", \n                                     suffix = \" €\"))\nsales_by_year_and_state_tbl\n\n\n\n  \n\n\nsales_by_year_and_state_tbl %&gt;%\n  ggplot(aes(x = state, y = sales)) +\n  \n  # Geometries\n  geom_col(fill = \"#2DC6D6\") + # Use geom_col for a bar plot\n  geom_label(aes(label = sales_text)) + # Adding labels to the bars\n  geom_smooth(method = \"lm\", se = FALSE) + # Adding a trendline\n  \n  # Formatting\n  # scale_y_continuous(labels = scales::dollar) + # Change the y-axis. \n  # Again, we have to adjust it for euro values\n  scale_y_continuous(labels = scales::dollar_format(big.mark = \".\", \n                                                    decimal.mark = \",\", \n                                                    prefix = \"\", \n                                                    suffix = \" €\")) +\n  labs(\n    title    = \"Revenue by state\",\n    x = \"States\",\n    y = \"Revenue\"\n  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1))\n\n#&gt; `geom_smooth()` using formula = 'y ~ x'\n\n\n\n\n\n\n\n\n\n2 Challenge 2\nQuestion 2: Analyze the sales by location and year (facet_wrap). Because there are 12 states with bike stores, you should get 12 plots.\nCode:\n\n# Get state's sales per year\nsales_by_state_in_year  &lt;- separate(bike_orderlines_wrangled_tbl,\n                                    col = location,\n                                    into = c(\"city\", \"state\"),\n                                    sep = \", \",\n                                    convert = T)\n\nsales_by_state_in_year\n\n\n\n  \n\n\nsales_by_state_in_year &lt;- sales_by_state_in_year %&gt;%\n  \n  # Select columns\n  select(order_date, total_price, state) %&gt;%\n  \n  # Add year column\n  mutate(year = year(order_date)) %&gt;%\n  \n  # Grouping by year and summarizing sales\n  group_by(state, year) %&gt;% \n  summarize(sales = sum(total_price)) %&gt;%\n  \n  # Add a column that turns the numbers into a currency format \n  # (makes it in the plot optically more appealing)\n  # mutate(sales_text = scales::dollar(sales)) &lt;- Works for dollar values\n  mutate(sales_text = scales::dollar(sales, big.mark = \".\", \n                                     decimal.mark = \",\", \n                                     prefix = \"\", \n                                     suffix = \" €\"))\n\n#&gt; `summarise()` has grouped output by 'state'. You can override using the\n#&gt; `.groups` argument.\n\nsales_by_state_in_year\n\n\n\n  \n\n\n# Plot\nsalesYearStatePlot &lt;- sales_by_state_in_year  %&gt;%\n  # Set up x, y, fill\n  ggplot(aes(x = year, y = sales, fill = state)) +\n  \n  # Geometries\n  geom_col() + # Run up to here to get a stacked bar plot\n  \n  # Facet\n  facet_wrap(~ state) +\n  \n  # Formatting\n  scale_y_continuous(labels = scales::dollar_format(big.mark = \".\", \n                                                    decimal.mark = \",\", \n                                                    prefix = \"\", \n                                                    suffix = \" €\")) +\n  labs(\n    title = \"Revenue by year and state\",\n    subtitle = \"Each state is ordered by years 2015 to 2019\",\n    fill = \"States:\"\n  ) + theme(axis.text.x = element_text(angle = 45, hjust = 1))"
   },
   {
     "objectID": "content/01_journal/01_tidyverse.html#header-2",
@@ -46,7 +46,7 @@
     "href": "content/01_journal/02_data_acquisition.html",
     "title": "Data Acquisition",
     "section": "",
-    "text": "Note\n\n\n\nYou can delete everything in here and start fresh."
+    "text": "italics and bold\nsuperscript2 / subscript2\nstrikethrough\nverbatim code\n\nBlockquote"
   },
   {
     "objectID": "content/01_journal/04_data_visualization.html",
@@ -75,5 +75,26 @@
     "title": "Links",
     "section": "",
     "text": "Google is great, Google your problem\nStackoverflow is great, google will often take you there because someone has already asked your question, and someone else has answered, usually many people have answered your question many ways."
+  },
+  {
+    "objectID": "content/01_journal/04_data_visualization.html#header-2",
+    "href": "content/01_journal/04_data_visualization.html#header-2",
+    "title": "Data Visualization",
+    "section": "\n2.1 Header 2",
+    "text": "2.1 Header 2\nHeader 3\nHeader 4\nHeader 5\nHeader 6"
+  },
+  {
+    "objectID": "content/01_journal/02_data_acquisition.html#header-2",
+    "href": "content/01_journal/02_data_acquisition.html#header-2",
+    "title": "Data Acquisition",
+    "section": "\n2.1 Header 2",
+    "text": "2.1 Header 2\nHeader 3\nHeader 4\nHeader 5\nHeader 6"
+  },
+  {
+    "objectID": "content/01_journal/03_data_wrangling.html#header-2",
+    "href": "content/01_journal/03_data_wrangling.html#header-2",
+    "title": "Data Wrangling",
+    "section": "\n2.1 Header 2",
+    "text": "2.1 Header 2\nHeader 3\nHeader 4\nHeader 5\nHeader 6"
   }
 ]
