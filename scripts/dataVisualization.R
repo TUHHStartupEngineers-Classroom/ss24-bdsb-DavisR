@@ -583,7 +583,7 @@ ggplot() +
                       na.value = "grey", 
                       breaks = seq(0, 0.006, by = 0.002),  # Set breaks from 0 to 0.006 in steps of 0.001
                       labels = paste0(seq(0.00, 0.60, by = 0.20), "%")) +  # Set labels from 0% to 60%
-  labs(title = "Distribution of Mortality Rate",
+  labs(title = "Confirmed COVID-19 deaths relative to size of the population",
        fill = "Mortality Rate",
        map_id = "Country") +
   theme_void()

@@ -200,6 +200,43 @@ bike_orderlines_wrangled_tbl %>%
 
 
 
+# Challenges
+# Challenge 1
+library(tidyverse)
+library("readxl")
+
+# Importing Files
+bikes_tbl      <- read_excel(path = "01_bike_sales/01_raw_data/bikes.xlsx")
+bikeshops_tbl  <- read_excel(path = "01_bike_sales/01_raw_data/bikeshops.xlsx")
+orderlines_tbl <- read_excel(path = "01_bike_sales/01_raw_data/orderlines.xlsx")
+
+# Joining Data
+left_join(orderlines_tbl, bikes_tbl, by = c("product.id" = "bike.id"))
+
+# Chaining commands with the pipe and assigning it to order_items_joined_tbl
+bike_orderlines_joined_tbl <- orderlines_tbl %>%
+  left_join(bikes_tbl, by = c("product.id" = "bike.id")) %>%
+  left_join(bikeshops_tbl, by = c("customer.id" = "bikeshop.id"))
+
+# Wrangling Data
+bike_orderlines_joined_tbl %>% 
+  select(category) %>%
+  filter(str_detect(category, "^Mountain")) %>% 
+  unique()
+
+bike_orderlines_wrangled_tbl <- bike_orderlines_joined_tbl %>%
+  separate(col    = category,
+           into   = c("category.1", "category.2", "category.3"),
+           sep    = " - ") %>%
+  mutate(total.price = price * quantity) %>%
+  select(-...1, -gender) %>%
+  select(-ends_with(".id")) %>%
+  bind_cols(bike_orderlines_joined_tbl %>% select(order.id)) %>% 
+  select(order.id, contains("order"), contains("model"), contains("category"),
+         price, quantity, total.price,
+         everything()) %>%
+  rename(bikeshop = name) %>%
+  set_names(names(.) %>% str_replace_all("\\.", "_"))
 
 # Separate cities and states
 bike_orderlines_wrangled_tbl_states <- separate(bike_orderlines_wrangled_tbl,
@@ -210,20 +247,10 @@ bike_orderlines_wrangled_tbl_states <- separate(bike_orderlines_wrangled_tbl,
 bike_orderlines_wrangled_tbl_states
 
 sales_by_year_and_state_tbl <- bike_orderlines_wrangled_tbl_states %>%
-  
-  # Select columns
   select(order_date, total_price, state) %>%
-  
-  # Add year column
   mutate(year = year(order_date)) %>%
-  
-  # Grouping by year and summarizing sales
   group_by(state) %>% 
   summarize(sales = sum(total_price)) %>%
-  
-  # Add a column that turns the numbers into a currency format 
-  # (makes it in the plot optically more appealing)
-  # mutate(sales_text = scales::dollar(sales)) <- Works for dollar values
   mutate(sales_text = scales::dollar(sales, big.mark = ".", 
                                      decimal.mark = ",", 
                                      prefix = "", 
@@ -231,8 +258,6 @@ sales_by_year_and_state_tbl <- bike_orderlines_wrangled_tbl_states %>%
 sales_by_year_and_state_tbl
 
 sales_by_year_and_state_tbl %>%
-  
-  # Setup canvas with the columns year (x-axis) and sales (y-axis)
   ggplot(aes(x = state, y = sales)) +
   
   # Geometries
@@ -257,7 +282,8 @@ sales_by_year_and_state_tbl %>%
 
 
 
-# 2. Get state's sales per year
+# Challenge 2
+# Get state's sales per year
 sales_by_state_in_year  <- separate(bike_orderlines_wrangled_tbl,
                                     col = location,
                                     into = c("city", "state"),
