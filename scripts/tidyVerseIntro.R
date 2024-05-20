@@ -206,9 +206,9 @@ library(tidyverse)
 library("readxl")
 
 # Importing Files
-bikes_tbl      <- read_excel(path = "01_bike_sales/01_raw_data/bikes.xlsx")
-bikeshops_tbl  <- read_excel(path = "01_bike_sales/01_raw_data/bikeshops.xlsx")
-orderlines_tbl <- read_excel(path = "01_bike_sales/01_raw_data/orderlines.xlsx")
+bikes_tbl      <- read_excel(path = "scripts/01_bike_sales/01_raw_data/bikes.xlsx")
+bikeshops_tbl  <- read_excel(path = "scripts/01_bike_sales/01_raw_data/bikeshops.xlsx")
+orderlines_tbl <- read_excel(path = "scripts/01_bike_sales/01_raw_data/orderlines.xlsx")
 
 # Joining Data
 left_join(orderlines_tbl, bikes_tbl, by = c("product.id" = "bike.id"))

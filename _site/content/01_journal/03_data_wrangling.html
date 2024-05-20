@@ -193,36 +193,37 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="question-1" class="level2" data-number="1.1"><h2 data-number="1.1" class="anchored" data-anchor-id="question-1">
 <span class="header-section-number">1.1</span> Question 1</h2>
 <p>Patent Dominance: What US company / corporation has the most patents? List the 10 US companies with the most assigned/granted patents.</p>
+<p>Answer:</p>
+<p>For this we use the reduced data set due to computational restrictions. The data sets will be read in and wrangled and filtered according to US-company specific keywords. Then the companies with the most patents will be printed.</p>
 <p>Code:</p>
-<div class="cell" data-hash="03_data_wrangling_cache/html/unnamed-chunk-1_7761bcb23a5c7fa471fe1a3a55b8f64c">
+<div class="cell" data-hash="03_data_wrangling_cache/html/unnamed-chunk-1_8d96e333a35d852e217cfada336f19df">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">library</span>(data.table)</span>
 <span id="cb1-2"><a href="#cb1-2"></a><span class="fu">library</span>(dplyr)</span>
 <span id="cb1-3"><a href="#cb1-3"></a><span class="fu">library</span>(vroom)</span>
 <span id="cb1-4"><a href="#cb1-4"></a><span class="fu">library</span>(magrittr) </span>
 <span id="cb1-5"><a href="#cb1-5"></a></span>
 <span id="cb1-6"><a href="#cb1-6"></a></span>
-<span id="cb1-7"><a href="#cb1-7"></a></span>
-<span id="cb1-8"><a href="#cb1-8"></a><span class="co"># Challenge</span></span>
-<span id="cb1-9"><a href="#cb1-9"></a>col_types <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb1-10"><a href="#cb1-10"></a>  <span class="at">id =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-11"><a href="#cb1-11"></a>  <span class="at">type =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-12"><a href="#cb1-12"></a>  <span class="at">number =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-13"><a href="#cb1-13"></a>  <span class="at">country =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-14"><a href="#cb1-14"></a>  <span class="at">date =</span> <span class="fu">col_date</span>(<span class="st">"%Y-%m-%d"</span>),</span>
-<span id="cb1-15"><a href="#cb1-15"></a>  <span class="at">abstract =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-16"><a href="#cb1-16"></a>  <span class="at">title =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-17"><a href="#cb1-17"></a>  <span class="at">kind =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-18"><a href="#cb1-18"></a>  <span class="at">num_claims =</span> <span class="fu">col_double</span>(),</span>
-<span id="cb1-19"><a href="#cb1-19"></a>  <span class="at">filename =</span> <span class="fu">col_character</span>(),</span>
-<span id="cb1-20"><a href="#cb1-20"></a>  <span class="at">withdrawn =</span> <span class="fu">col_double</span>()</span>
-<span id="cb1-21"><a href="#cb1-21"></a>)</span>
-<span id="cb1-22"><a href="#cb1-22"></a></span>
-<span id="cb1-23"><a href="#cb1-23"></a>patent_tbl <span class="ot">&lt;-</span> <span class="fu">vroom</span>(</span>
-<span id="cb1-24"><a href="#cb1-24"></a>  <span class="at">file       =</span> <span class="st">"../../scripts/Patent_data_reduced/patent.tsv"</span>, </span>
-<span id="cb1-25"><a href="#cb1-25"></a>  <span class="at">delim      =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>, </span>
-<span id="cb1-26"><a href="#cb1-26"></a>  <span class="at">col_types  =</span> col_types,</span>
-<span id="cb1-27"><a href="#cb1-27"></a>  <span class="at">na         =</span> <span class="fu">c</span>(<span class="st">""</span>, <span class="st">"NA"</span>, <span class="st">"NULL"</span>)</span>
-<span id="cb1-28"><a href="#cb1-28"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="co"># Challenge</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>col_types <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb1-9"><a href="#cb1-9"></a>  <span class="at">id =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-10"><a href="#cb1-10"></a>  <span class="at">type =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-11"><a href="#cb1-11"></a>  <span class="at">number =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-12"><a href="#cb1-12"></a>  <span class="at">country =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-13"><a href="#cb1-13"></a>  <span class="at">date =</span> <span class="fu">col_date</span>(<span class="st">"%Y-%m-%d"</span>),</span>
+<span id="cb1-14"><a href="#cb1-14"></a>  <span class="at">abstract =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-15"><a href="#cb1-15"></a>  <span class="at">title =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-16"><a href="#cb1-16"></a>  <span class="at">kind =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-17"><a href="#cb1-17"></a>  <span class="at">num_claims =</span> <span class="fu">col_double</span>(),</span>
+<span id="cb1-18"><a href="#cb1-18"></a>  <span class="at">filename =</span> <span class="fu">col_character</span>(),</span>
+<span id="cb1-19"><a href="#cb1-19"></a>  <span class="at">withdrawn =</span> <span class="fu">col_double</span>()</span>
+<span id="cb1-20"><a href="#cb1-20"></a>)</span>
+<span id="cb1-21"><a href="#cb1-21"></a></span>
+<span id="cb1-22"><a href="#cb1-22"></a>patent_tbl <span class="ot">&lt;-</span> <span class="fu">vroom</span>(</span>
+<span id="cb1-23"><a href="#cb1-23"></a>  <span class="at">file       =</span> <span class="st">"../../scripts/Patent_data_reduced/patent.tsv"</span>, </span>
+<span id="cb1-24"><a href="#cb1-24"></a>  <span class="at">delim      =</span> <span class="st">"</span><span class="sc">\t</span><span class="st">"</span>, </span>
+<span id="cb1-25"><a href="#cb1-25"></a>  <span class="at">col_types  =</span> col_types,</span>
+<span id="cb1-26"><a href="#cb1-26"></a>  <span class="at">na         =</span> <span class="fu">c</span>(<span class="st">""</span>, <span class="st">"NA"</span>, <span class="st">"NULL"</span>)</span>
+<span id="cb1-27"><a href="#cb1-27"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>#&gt; Warning: The following named parsers don't match the column names: type,
 #&gt; number, country, abstract, title, kind, filename, withdrawn</code></pre>
@@ -291,7 +292,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </section><section id="question-2" class="level2" data-number="1.2"><h2 data-number="1.2" class="anchored" data-anchor-id="question-2">
 <span class="header-section-number">1.2</span> Question 2</h2>
+<p>Question:</p>
 <p>Recent patent activity: What US company had the most patents granted in August 2014? List the top 10 companies with the most new granted patents for August 2014.</p>
+<p>Answer:</p>
+<p>For this I filtered the patents for August 2014 and US only. Then I summarized the number of their patents to get the companies that had the most patents. These are printed out.</p>
 <p>Code:</p>
 <div class="cell" data-hash="03_data_wrangling_cache/html/unnamed-chunk-2_b628df1ab2e5b0fd073f4cb7567d699e">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a><span class="co"># For 2 assignee, patent_assignee, patent</span></span>
@@ -339,7 +343,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </section><section id="question-3" class="level2" data-number="1.3"><h2 data-number="1.3" class="anchored" data-anchor-id="question-3">
 <span class="header-section-number">1.3</span> Question 3</h2>
+<p>Question:</p>
 <p>Innovation in Tech: What is the most innovative tech sector? For the top 10 companies (worldwide) with the most patents, what are the top 5 USPTO tech main classes?</p>
+<p>Answer:</p>
+<p>For this the the companies with the most number of patents will be taken and then for those the top company classes will be taken to be printed out, which are the top 5 tech classes of the top 10 companies.</p>
 <p>Code:</p>
 <div class="cell" data-hash="03_data_wrangling_cache/html/unnamed-chunk-3_cf35a0bcb5135877156c14696b1fdd3a">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1"></a><span class="co"># Question 3</span></span>
