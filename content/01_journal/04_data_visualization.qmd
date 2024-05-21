@@ -1,8 +1,133 @@
 ---
 title: "Data Visualization"
-author: "Joschka Schwarz"
+author: "Davis Rakhshan"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+# Challenge 1
+
+Question 1:
+
+Map the time course of the cumulative Covid-19 cases!
+
+Answer:
+
+For this I read the COVID data and select the specific countries, which are Germany, UK, US, France and Spain. I additionally compute the cumulative COVID cases for Europe (optional). These will be plotted from 01.01.2020 to 20.04.2022 (20.04.2022 because at the 21.04.2022 the next month with missing data will be plotted too, so the limit is at the 20th of each month). What is plotted are the accumulations of COVID cases over the time frame for each country and Europe. A different theme than default is also used. For the two highest lines the last value will also be put out.
+
+Code:
+
+```{r}
+
+# Challenge 1
+library(tidyverse)
+library(lubridate)
+library(ggrepel) 
+
+covid_data_tbl <- read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+
+
+# Filter data for the specified countries and date range
+selected_countries <- c("Germany", "United Kingdom", "United States", "France", "Spain")
+
+filtered_data <- covid_data_tbl %>%
+  filter(location %in% selected_countries,
+         date >= "2020-01-01" & date <= "2022-04-20")
+
+europe_data <- covid_data_tbl %>%
+  filter(continent == "Europe",
+         date >= "2020-01-01" & date <= "2022-04-20") %>%
+  group_by(date) %>%
+  summarise(total_cases = ifelse(sum(total_cases, na.rm = TRUE) == 0, NA, sum(total_cases, na.rm = TRUE)))
+
+
+# Combine the Europe data with the original data
+combined_data <- bind_rows(filtered_data, europe_data %>% mutate(location = "Europe"))
+
+# Define custom colors for the lines
+custom_colors <- c("red2", "skyblue2", "coral", "orange3", "yellow4", 'deeppink4')  # You can add more colors as needed
+
+# Extract the last data points for Europe and United States
+last_values <- combined_data %>%
+  filter(location %in% c("Europe", "United States")) %>%
+  group_by(location) %>%
+  slice(n())  # Extract the last row for each location
+
+
+# Plot cumulative Covid-19 cases over time
+ggplot(combined_data, aes(x = date, y = total_cases, color = location)) +
+  geom_line(size = 1.5, alpha = 0) +  # Increase size and reduce transparency
+  geom_smooth(method = "loess", se = FALSE, size = 1, alpha = 0.2, span = 0.2) +  # Adjust span for reduced smoothing
+  geom_label(data = last_values, aes(label = last_values$total_cases, color = location), 
+             label.padding = unit(0.2, "lines"), 
+             size = 3, 
+             show.legend = FALSE,
+             label=format(last_values$total_cases, big.mark = ".", scientific = FALSE)) + # Apply formatting to total_cases label
+  labs(title = "Cumulative Covid-19 Cases Over Time",
+       x = "Date",
+       y = "Cumulative Cases",
+       color = "Country") +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") + # Set breaks and labels to every month
+  scale_y_continuous(labels = function(x) ifelse(x >= 1e6, paste0(x/1e6, "M"), x),
+                     limits = c(0, 200e6)) +
+  theme_linedraw() +
+  scale_color_manual(values = custom_colors) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), title = element_text(face = "bold", color = "#0b1562")) 
+```
+
+# Challenge 2
+
+Question 2:
+
+Visualize the distribution of the mortality rate (deaths / population) with geom_map() (alternatively, you can plot the case-fatality rate (deaths / cases)).
+
+Answer:
+
+For this I read the COVID data again and filter it to be the last proper day where data of entries is present as of time of this challenge. Then the country names are adjusted and the mortality rate will be computed. This is plotted using the world map with a red color scale. Here: light red -> lower mortality rate, dark red -> high mortality rate, low and high here are relative to the scale.
+
+Code:
+
+```{r}
+
+# Load map data
+world <- map_data("world")
+
+# Read COVID-19 data
+covid_data_tbl <- read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+
+# Filter data for the specified date range
+filtered_data <- covid_data_tbl %>%
+  filter(date == "2024-04-28")
+
+# Adjust country names
+filtered_data <- filtered_data %>%
+  mutate(location = case_when(
+    location == "United Kingdom" ~ "UK",
+    location == "United States" ~ "USA",
+    location == "Democratic Republic of Congo" ~ "Democratic Republic of the Congo",
+    TRUE ~ location
+  )) %>%
+  distinct()
+
+
+# Calculate mortality rate
+filtered_data <- filtered_data %>%
+  mutate(mortality_rate = ifelse(population == 0, NA, total_deaths / population))
+
+# Merge COVID-19 data with map data
+merged_data <- left_join(world, filtered_data, by = c("region" = "location"))
+
+
+# Plot distribution of mortality rate
+ggplot() +
+  geom_map(data = merged_data, map = world, aes(map_id = region, fill = mortality_rate)) +
+  expand_limits(x = world$long, y = world$lat) +
+  scale_fill_gradient(name = "Mortality Rate", 
+                      low = "#ff1d1d", 
+                      high = "#460000", 
+                      na.value = "grey", 
+                      breaks = seq(0, 0.006, by = 0.002),  # Set breaks from 0 to 0.006 in steps of 0.001
+                      labels = paste0(seq(0.00, 0.60, by = 0.20), "%")) +  # Set labels from 0% to 60%
+  labs(title = "Confirmed COVID-19 deaths relative to size of the population",
+       fill = "Mortality Rate",
+       map_id = "Country") +
+  theme_void()
+```

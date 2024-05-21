@@ -1,8 +1,164 @@
 ---
 title: "Data Wrangling"
-author: "Joschka Schwarz"
+author: "Davis Rakhshan"
 ---
 
-::: callout-note
-You can delete everything in here and start fresh.
-:::
+# Challenge on alternative / reduced data
+
+## Question 1
+
+Patent Dominance: What US company / corporation has the most patents? List the 10 US companies with the most assigned/granted patents.
+
+Answer:
+
+For this we use the reduced data set due to computational restrictions. The data sets will be read in and wrangled and filtered according to US-company specific keywords. Then the companies with the most patents will be printed.
+
+Code:
+
+```{r}
+library(data.table)
+library(dplyr)
+library(vroom)
+library(magrittr) 
+
+
+# Challenge
+col_types <- list(
+  id = col_character(),
+  type = col_character(),
+  number = col_character(),
+  country = col_character(),
+  date = col_date("%Y-%m-%d"),
+  abstract = col_character(),
+  title = col_character(),
+  kind = col_character(),
+  num_claims = col_double(),
+  filename = col_character(),
+  withdrawn = col_double()
+)
+
+patent_tbl <- vroom(
+  file       = "../../scripts/Patent_data_reduced/patent.tsv", 
+  delim      = "\t", 
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+patent_assignee_tbl <- vroom(
+  file       = "../../scripts/Patent_data_reduced/patent_assignee.tsv", 
+  delim      = "\t", 
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+assignee_tbl <- vroom(
+  file       = "../../scripts/Patent_data_reduced/assignee.tsv", 
+  delim      = "\t", 
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+uspc_tbl <- vroom(
+  file       = "../../scripts/Patent_data_reduced/uspc.tsv", 
+  delim      = "\t", 
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+
+
+# Question 1
+# For 1	assignee, patent_assignee
+# Merge tables and count patents per organization
+merged_tbl <- merge(assignee_tbl, patent_assignee_tbl, by.x = "id", by.y = "assignee_id", all.x = TRUE)
+
+# Filter US companies and count patents
+# US companies are being filtered by US specific keywords
+patent_counts <- merged_tbl %>%
+  filter(grepl("Inc\\.|LLC|Corporation|Corporated|Company|Ltd\\.|Incorporated", organization, ignore.case = TRUE)) %>%
+  group_by(organization) %>%
+  summarise(patent_count = n()) %>%
+  arrange(desc(patent_count))
+
+# Print the result
+print(patent_counts)
+```
+
+## Question 2
+
+Question:
+
+Recent patent activity: What US company had the most patents granted in August 2014? List the top 10 companies with the most new granted patents for August 2014.
+
+Answer:
+
+For this I filtered the patents for August 2014 and US only. Then I summarized the number of their patents to get the companies that had the most patents. These are printed out.
+
+Code:
+
+```{r}
+# For 2	assignee, patent_assignee, patent
+# Filter patents granted in August 2014
+august_patents <- patent_tbl %>%
+  filter(format(date, "%Y-%m") == "2014-08")
+
+# Join with patent_assignee_tbl to get assignee information
+patents_assignees <- august_patents %>%
+  inner_join(patent_assignee_tbl, by = c("id" = "patent_id"))
+
+# Join with assignee_tbl to get assignee information
+patents_assignees_details <- patents_assignees %>%
+  inner_join(assignee_tbl, by = c("assignee_id" = "id"))
+
+# Filter only US companies
+us_companies <- patents_assignees_details %>%
+  filter(grepl("USA", organization, ignore.case = TRUE))
+
+# Count patents granted to each US company
+patents_count <- us_companies %>%
+  group_by(organization) %>%
+  summarise(num_patents = n()) %>%
+  arrange(desc(num_patents))
+
+# Select top 10 companies
+top_10_us_companies <- head(patents_count, 10)
+
+print(top_10_us_companies)
+```
+
+## Question 3
+
+Question:
+
+Innovation in Tech: What is the most innovative tech sector? For the top 10 companies (worldwide) with the most patents, what are the top 5 USPTO tech main classes?
+
+Answer:
+
+For this the the companies with the most number of patents will be taken and then for those the top company classes will be taken to be printed out, which are the top 5 tech classes of the top 10 companies.
+
+Code:
+
+```{r}
+# Question 3
+# For 3	assignee_tbl, patent_assignee_tbl, uspc_tbl
+# Find top 10 companies with most patents
+top_10_companies <- patent_assignee_tbl %>%
+  group_by(assignee_id) %>%
+  summarise(num_patents = n()) %>%
+  arrange(desc(num_patents)) %>%
+  top_n(10)
+
+# Join with assignee_tbl to get org information
+top_10_companies_with_org <- top_10_companies %>%
+  inner_join(select(assignee_tbl, -type), by = c("assignee_id" = "id"))
+
+
+# Main classes of patents
+top_10_main_classes <- top_10_companies_with_org %>%
+  inner_join(patent_assignee_tbl, by = "assignee_id") %>%
+  inner_join(uspc_tbl %>% mutate(patent_id = as.character(patent_id)), by = "patent_id") %>%
+  group_by(mainclass_id) %>%
+  summarise(num_patents = n()) %>%
+  arrange(desc(num_patents)) %>%
+  top_n(5)
+
+print(top_10_main_classes)
+
+
+```
